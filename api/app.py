@@ -15,7 +15,7 @@ os.makedirs(tmp_dir, exist_ok=True)
 app = Flask(__name__)
 
 
-@app.route("/")
+@app.route("/test")
 def fun():
     return "works"
 
@@ -42,10 +42,14 @@ def process_file():
     tmp_dir_local = tmp_dir  # Initialize tmp_dir_local with the global tmp_dir value
 
     # Handle the file processing if file is present
-    matched_function, matched_description, matched_files = find_similar_question(
+    matched_function = find_similar_question(
         question
     )  # Function to compare using cosine similarity
-    print("-----------Matched Function------------\n", matched_function)
+    
+    # Extract just the function name from the tuple
+    function_name = matched_function[0]
+    print("-----------Matched Function------------\n", function_name)
+    
     if file:
         # Save and process the uploaded file (ZIP or image)
         file_path = os.path.join(tmp_dir, file.filename)
@@ -58,7 +62,7 @@ def process_file():
     # Extract parameters using the matched function
     parameters = extract_parameters(
         str(question),
-        function_definitions_llm=function_definitions_objects_llm.get(matched_function, {}),
+        function_definitions_llm=function_definitions_objects_llm.get(function_name, {}),
     )  # Function to call OpenAI API and extract parameters
 
     print("-----------parameters------------\n", parameters)
@@ -68,7 +72,7 @@ def process_file():
         return jsonify({"error": "Failed to extract parameters for the given question"}), 400
 
     solution_function = functions_dict.get(
-        str(matched_function), lambda **kwargs: "No matching function found"
+        function_name, lambda **kwargs: "No matching function found"
     )  # the solutions functions name is same as in questions.json
 
     # Parse the arguments from the parameters

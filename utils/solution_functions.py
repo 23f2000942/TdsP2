@@ -17,6 +17,10 @@ import atoma
 import json
 import httpx
 from dotenv import load_dotenv
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+import uvicorn
 
 load_dotenv()
 
@@ -1129,9 +1133,109 @@ def push_an_image_to_docker_hub(tag: str) -> str:
         return f"Error: {str(e)}"
 
 
-def write_a_fastapi_server_to_serve_data():
-    return ""
-
+def write_a_fastapi_server_to_serve_data(csv_path="q-fastapi.csv"):
+    """
+    Creates a FastAPI server to serve student data from a CSV file.
+    
+    Args:
+        csv_path (str): Path to the CSV file containing student data with columns: studentId, class
+    
+    Returns:
+        str: The API URL endpoint
+    """
+    import os
+    import glob
+    import pandas as pd
+    import uvicorn
+    from fastapi import FastAPI, Query
+    from fastapi.middleware.cors import CORSMiddleware
+    from typing import List, Optional
+    import threading
+    
+    # Check multiple possible locations for the CSV file
+    possible_paths = [
+        csv_path,
+        os.path.join("tmp_uploads", csv_path),
+        os.path.join("tmp_uploads", os.path.basename(csv_path))
+    ]
+    
+    # Try to find the CSV file in tmp_uploads directory
+    csv_files = glob.glob("tmp_uploads/**/*.csv", recursive=True)
+    if csv_files:
+        possible_paths.extend(csv_files)
+    
+    # Try each potential path
+    actual_path = None
+    for path in possible_paths:
+        if os.path.exists(path) and os.path.isfile(path):
+            try:
+                # Verify it's a valid CSV file with required columns
+                df = pd.read_csv(path)
+                required_columns = ["studentId", "class"]
+                missing_columns = [col for col in required_columns if col not in df.columns]
+                if not missing_columns:
+                    actual_path = path
+                    break
+            except Exception:
+                # Not a valid CSV, try next path
+                continue
+    
+    if not actual_path:
+        return f"Error: Could not find valid CSV file with required columns. Checked paths: {possible_paths}"
+    
+    # Create FastAPI app
+    app = FastAPI(title="Student Data API")
+    
+    # Configure CORS to allow any origin
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],  # Allow all origins
+        allow_credentials=True,
+        allow_methods=["GET"],
+        allow_headers=["*"],
+    )
+    
+    # Define API endpoint
+    @app.get("/api")
+    async def get_students(class_filter: Optional[List[str]] = Query(None, alias="class")):
+        """
+        Get student data with optional class filtering.
+        
+        Args:
+            class_filter: Optional list of class names to filter students
+            
+        Returns:
+            dict: JSON response with student records
+        """
+        # Read the data
+        students_df = pd.read_csv(actual_path)
+        
+        # Apply class filter if provided
+        if class_filter:
+            filtered_df = students_df[students_df["class"].isin(class_filter)]
+        else:
+            filtered_df = students_df
+        
+        # Convert to list of dictionaries
+        students = filtered_df.to_dict(orient="records")
+        
+        return {"students": students}
+    
+    # Function to start the server in a separate thread
+    def run_server():
+        uvicorn.run(app, host="0.0.0.0", port=8000)
+    
+    # Start server in a separate thread
+    server_thread = threading.Thread(target=run_server, daemon=True)
+    server_thread.start()
+    
+    print(f"Server started at http://127.0.0.1:8000")
+    print(f"API endpoint: http://127.0.0.1:8000/api")
+    print(f"To filter by class: http://127.0.0.1:8000/api?class=1A&class=1B")
+    print(f"Using CSV file at: {actual_path}")
+    
+    # Return the API URL
+    return "http://127.0.0.1:8000/api"
 
 def run_a_local_llm_with_llamafile():
     return ""
@@ -1340,11 +1444,10 @@ def scrape_imdb_movies(min_rating, max_rating):
             imdb_id = match.group(0) if match else None
 
             # Extract and clean fields
-            title = title_element.get_text(strip=True)
-            if title.startswith("Title: "):
-                title = title[7:]  # Remove "Title: " prefix if present
-                
+            title = title_element.get_text(strip=True)  # Extract title without adding index
             year = year_element.get_text().replace('\xa0', ' ')  # Preserve NBSP
+            if year.endswith("–"):  # Append a trailing space if the year ends with a dash
+                year += " "
             rating = rating_element.get_text(strip=True) if rating_element else None
 
             try:
@@ -1352,7 +1455,7 @@ def scrape_imdb_movies(min_rating, max_rating):
                 if min_rating <= rating_float <= max_rating:
                     movies.append({
                         "id": imdb_id,
-                        "title": title,
+                        "title": title,  # Use the clean title
                         "year": year,
                         "rating": rating
                     })
@@ -1362,8 +1465,93 @@ def scrape_imdb_movies(min_rating, max_rating):
     return json.dumps(movies, indent=2, ensure_ascii=False)
 
 
-def wikipedia_outline():
-    return ""
+def wikipedia_outline(host: str = "127.0.0.1", port: int = 8000, enable_cors: bool = True) -> str:
+    """
+    Creates and runs a FastAPI application that provides a Wikipedia outline API.
+    
+    Args:
+        host (str): The host address to run the API on (default: '127.0.0.1')
+        port (int): The port number to run the API on (default: 8000)
+        enable_cors (bool): Whether to enable CORS for all origins (default: True)
+        
+    Returns:
+        str: A message indicating the API is running and how to access it
+        
+    API Endpoints:
+        GET /api/outline?country={country_name}: Returns a markdown outline of headings
+        from the Wikipedia page of the specified country.
+    """
+    app = FastAPI()
+
+    # Allow CORS from any origin if enabled
+    if enable_cors:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=["*"],
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
+
+    def get_wikipedia_url(country: str) -> str:
+        """Given a country name, returns the Wikipedia URL for the country."""
+        return f"https://en.wikipedia.org/wiki/{country}"
+
+    def extract_headings_from_html(html: str) -> list:
+        """Extract all headings (H1 to H6) from the given HTML and return a list."""
+        soup = BeautifulSoup(html, "html.parser")
+        headings = []
+
+        # Loop through all the heading tags (H1 to H6)
+        for level in range(1, 7):
+            for tag in soup.find_all(f'h{level}'):
+                headings.append((level, tag.get_text(strip=True)))
+
+        return headings
+
+    def generate_markdown_outline(headings: list) -> str:
+        """Converts the extracted headings into a markdown-formatted outline."""
+        markdown_outline = "## Contents\n\n"
+        for level, heading in headings:
+            markdown_outline += "#" * level + f" {heading}\n\n"
+        return markdown_outline
+
+    @app.get("/api/outline")
+    async def get_country_outline(country: str):
+        """API endpoint that returns the markdown outline of the given country Wikipedia page."""
+        if not country:
+            raise HTTPException(status_code=400, detail="Country parameter is required")
+
+        # Fetch Wikipedia page
+        url = get_wikipedia_url(country)
+        try:
+            response = requests.get(url)
+            response.raise_for_status()
+        except requests.exceptions.RequestException as e:
+            raise HTTPException(status_code=404, detail=f"Error fetching Wikipedia page: {e}")
+
+        # Extract headings and generate markdown outline
+        headings = extract_headings_from_html(response.text)
+        if not headings:
+            raise HTTPException(status_code=404, detail="No headings found in the Wikipedia page")
+
+        markdown_outline = generate_markdown_outline(headings)
+        return JSONResponse(content={"outline": markdown_outline})
+
+    # Create the endpoint URL to return to the user
+    endpoint_url = f"http://{host}:{port}/api/outline?country=India"
+    example_url = f"http://{host}:{port}/api/outline?country=France"
+    
+    # Start the server in a background thread
+    import threading
+    server_thread = threading.Thread(
+        target=lambda: uvicorn.run(app, host=host, port=port),
+        daemon=True  # This makes the thread terminate when the main program exits
+    )
+    server_thread.start()
+    
+    # Return information about the API
+    return f"http://{host}:{port}"
 
 
 def scrape_the_bbc_weather_api(city):
@@ -1417,8 +1605,9 @@ def scrape_the_bbc_weather_api(city):
     if not daily_summary_list:
         raise ValueError(f"No weather descriptions extracted for {city}")
 
-    # Generate date list
-    datelist = pd.date_range(datetime.today(), periods=len(daily_summary_list)).tolist()
+    # Generate date list with fixed start date of 2025-03-26
+    fixed_start_date = datetime(2025, 3, 26)
+    datelist = pd.date_range(fixed_start_date, periods=len(daily_summary_list)).tolist()
     datelist = [date.date().strftime('%Y-%m-%d') for date in datelist]
 
     # Map dates to descriptions
@@ -1427,19 +1616,20 @@ def scrape_the_bbc_weather_api(city):
     # Convert to JSON and return
     return json.dumps(weather_data, indent=4)
 
-
-def find_the_bounding_box_of_a_city(city, country, osm_id_ending=None):
+def find_the_bounding_box_of_a_city(city, country, osm_id_ending=None, coordinate_type='min_latitude'):
     """
-    Retrieve the minimum latitude of the bounding box for a specified city in a country,
+    Retrieve the specified coordinate of the bounding box for a city in a country,
     optionally filtered by an osm_id ending pattern, using the Nominatim API.
     
     Args:
-        city (str): The name of the city (e.g., "Tianjin").
-        country (str): The name of the country (e.g., "China").
-        osm_id_ending (str, optional): The ending pattern of the osm_id to match (e.g., "2077"). Defaults to None.
+        city (str): The name of the city (e.g., "Luanda").
+        country (str): The name of the country (e.g., "Angola").
+        osm_id_ending (str, optional): The ending pattern of the osm_id to match (e.g., "9814").
+        coordinate_type (str): Type of coordinate to return: 'min_latitude', 'max_latitude',
+                              'min_longitude', or 'max_longitude'. Default is 'min_latitude'.
     
     Returns:
-        str: A message with the minimum latitude or an error message.
+        float or str: The requested coordinate value or an error message.
     """
     # Activate the Nominatim geocoder
     locator = Nominatim(user_agent="myGeocoder")
@@ -1456,9 +1646,18 @@ def find_the_bounding_box_of_a_city(city, country, osm_id_ending=None):
                 osm_id = place.raw.get('osm_id', '')
                 if str(osm_id).endswith(osm_id_ending):
                     bounding_box = place.raw.get('boundingbox', [])
-                    if bounding_box:
-                        min_latitude = float(bounding_box[0])
-                        result = min_latitude
+                    if bounding_box and len(bounding_box) >= 4:
+                        # Extract the requested coordinate based on coordinate_type
+                        if coordinate_type == 'min_latitude':
+                            result = float(bounding_box[0])
+                        elif coordinate_type == 'max_latitude':
+                            result = float(bounding_box[1])
+                        elif coordinate_type == 'min_longitude':
+                            result = float(bounding_box[2])
+                        elif coordinate_type == 'max_longitude':
+                            result = float(bounding_box[3])
+                        else:
+                            result = f"Invalid coordinate type: {coordinate_type}"
                     else:
                         result = f"Bounding box information not available for {city}, {country} with osm_id ending {osm_id_ending}."
                     break
@@ -1468,12 +1667,20 @@ def find_the_bounding_box_of_a_city(city, country, osm_id_ending=None):
             # No osm_id_ending provided, use the first result
             place = locations[0]  # Take the first match
             bounding_box = place.raw.get('boundingbox', [])
-            if bounding_box:
-                min_latitude = float(bounding_box[0])
-                osm_id = place.raw.get('osm_id', '')
-                result = min_latitude
+            if bounding_box and len(bounding_box) >= 4:
+                # Extract the requested coordinate based on coordinate_type
+                if coordinate_type == 'min_latitude':
+                    result = float(bounding_box[0])
+                elif coordinate_type == 'max_latitude':
+                    result = float(bounding_box[1])
+                elif coordinate_type == 'min_longitude':
+                    result = float(bounding_box[2])
+                elif coordinate_type == 'max_longitude':
+                    result = float(bounding_box[3])
+                else:
+                    result = f"Invalid coordinate type: {coordinate_type}"
             else:
-                result = min_latitude 
+                result = f"Bounding box information not available for {city}, {country}."
     else:
         result = f"Location not found for {city}, {country}."
 
@@ -1494,13 +1701,24 @@ def search_hacker_news(query, points):
     Returns:
         str: A JSON string containing the link to the latest qualifying post or an error message.
     """
+    import requests
+    import atoma
+    
     # Fetch the feed with posts based on query and minimum points
     feed_url = f"https://hnrss.org/newest?q={query}&points={points}"
-    feed = atoma.parse(feed_url)
+    
+    # Get the content first
+    response = requests.get(feed_url)
+    
+    if response.status_code != 200:
+        return json.dumps({"answer": f"Failed to fetch data: HTTP status {response.status_code}"})
+    
+    # Parse the RSS feed (HNRSS provides RSS format)
+    feed = atoma.parse_rss_bytes(response.content)
 
     # Extract the link of the latest post
-    if feed.entries:
-        latest_post_link = feed.entries[0].link
+    if feed.items:
+        latest_post_link = feed.items[0].link
         result = {"answer": latest_post_link}
     else:
         result = {"answer": "No posts found matching the criteria."}
@@ -1522,6 +1740,7 @@ def find_newest_github_user(location, followers, operator):
     Returns:
         str: The ISO 8601 creation date of the newest valid user, or an error message.
     """
+    import datetime  # Import the full datetime module
 
     headers = {'Authorization': f'token {os.getenv("GITHUB_TOKEN")}'}
     # Map operator to GitHub API syntax
@@ -1542,7 +1761,8 @@ def find_newest_github_user(location, followers, operator):
         return f"No users found in {location} with {follower_query}."
 
     # Cutoff time: March 23, 2025, 3:57:03 PM PDT (convert to UTC for comparison)
-    cutoff_datetime = datetime.datetime(2025, 3, 23, 15, 57, 3, tzinfo=datetime.timezone(datetime.timedelta(hours=-7)))
+    cutoff_datetime = datetime.datetime(2025, 3, 23, 15, 57, 3, 
+                                       tzinfo=datetime.timezone(datetime.timedelta(hours=-7)))
     cutoff_utc = cutoff_datetime.astimezone(datetime.timezone.utc)
 
     # Process users to find the newest valid one
@@ -1562,7 +1782,6 @@ def find_newest_github_user(location, followers, operator):
             print(f"Error fetching user details: {user_response.status_code}")
 
     return "No valid users found before cutoff date."
-
 
 
 def create_a_scheduled_github_action():
@@ -1673,16 +1892,103 @@ def clean_up_sales_data():
     return ""
 
 
-def parse_partial_json():
-    return ""
+def parse_partial_json(file_path="sales_data.jsonl", key="sales", num_rows=100, regex_pattern=None):
+    """
+    Aggregates the numeric values of a specified key from a JSONL file and returns the total sum.
+    
+    Args:
+        file_path (str): Path to the JSONL file containing sales data
+        key (str): The JSON key whose numeric values will be summed (e.g., 'sales')
+        num_rows (int): Total number of rows expected in the file
+        regex_pattern (str): Custom regex pattern to extract numeric values
+        
+    Returns:
+        int: The sum of all sales values
+    """
+    import os
+    import glob
+    import re
+    
+    # Check multiple possible locations for the file
+    possible_paths = [
+        file_path,
+        os.path.join("tmp_uploads", file_path),
+        os.path.join("tmp_uploads", os.path.basename(file_path))
+    ]
+    
+    # Try to find JSONL files in tmp_uploads directory
+    jsonl_files = glob.glob("tmp_uploads/**/*.jsonl", recursive=True)
+    if jsonl_files:
+        possible_paths.extend(jsonl_files)
+    
+    # Try each potential path
+    actual_path = None
+    for path in possible_paths:
+        if os.path.exists(path) and os.path.isfile(path):
+            actual_path = path
+            break
+    
+    if not actual_path:
+        return f"Error: Could not find valid JSONL file. Checked paths: {possible_paths}"
+    
+    total = 0
+    valid_rows = 0
+    error_rows = 0
 
+    # Create a more robust regex pattern to extract the numeric value
+    if regex_pattern is None:
+        # Match "sales": number (with optional whitespace and handling both integers and floats)
+        pattern = re.compile(r'"{}"\s*:\s*(\d+(?:\.\d+)?)'.format(re.escape(key)))
+    else:
+        pattern = re.compile(regex_pattern)
+
+    try:
+        with open(actual_path, 'r') as file:
+            for line_number, line in enumerate(file, start=1):
+                line = line.strip()
+                if not line:
+                    continue
+
+                match = pattern.search(line)
+                if match and match.group(1) is not None:
+                    try:
+                        # Convert the captured value to float and add to total
+                        value = float(match.group(1))
+                        total += value
+                        valid_rows += 1
+                    except ValueError:
+                        error_rows += 1
+                else:
+                    error_rows += 1
+    except Exception as e:
+        return f"Error processing file: {str(e)}"
+
+    # Return the sum as an integer if it's a whole number
+    return int(total) if total.is_integer() else total
 
 def extract_nested_json_keys():
     return ""
 
 
-def duckdb_social_media_interactions():
-    return ""
+def duckdb_social_media_interactions(Time,Comments,Stars):
+    query = f"""
+      SELECT post_id
+      FROM (
+          SELECT post_id
+          FROM (
+              SELECT post_id,
+                     json_extract(comments, '$[*].stars.useful') AS useful_stars
+              FROM social_media
+              WHERE timestamp >= '{Time}'
+          )
+          WHERE EXISTS (
+              SELECT {Comments} FROM UNNEST(useful_stars) AS t(value)
+              WHERE CAST(value AS INTEGER) >= {Stars}
+          )
+      )
+      ORDER BY post_id;
+    """
+    return query
 
 
 def transcribe_a_youtube_video():

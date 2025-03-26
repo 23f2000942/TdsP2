@@ -26,6 +26,11 @@ def extract_parameters(prompt: str, function_definitions_llm):
             print("Error: AIPROXY_TOKEN environment variable not set")
             return {"name": function_definitions_llm.get("name", "default"), "arguments": "{}"}
         
+        # Check if function_definitions_llm is valid and has required fields
+        if not function_definitions_llm or "name" not in function_definitions_llm:
+            print("Error: Invalid function definition, missing 'name' property")
+            return {"name": "default", "arguments": "{}"}
+            
         with httpx.Client(timeout=20) as client:
             # Construct a better API request
             response = client.post(

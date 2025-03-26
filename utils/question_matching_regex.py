@@ -433,6 +433,46 @@ As long as the LLM says the word Yes (case sensitive), you will be marked correc
 
     What is the JSON data?
     IMDb search results may differ by region. You may need to manually translate titles. Results may also change periodically. You may need to re-run your scraper code.""",
+    """
+A Country Information API for GlobalEdu
+GlobalEdu Platforms is a leading provider of educational technology solutions, specializing in creating interactive and informative content for students and educators worldwide. Their suite of products includes digital textbooks, educational apps, and online learning platforms that aim to make learning more engaging and accessible. To enhance their offerings, GlobalEdu Platforms seeks to integrate comprehensive country information into their educational tools, enabling users to access structured and easily navigable content about various nations.
+
+With the vast amount of information available on platforms like Wikipedia, manually curating and organizing country-specific data for educational purposes is both time-consuming and inefficient. GlobalEdu Platforms aims to automate this process to ensure that their educational materials are up-to-date, accurate, and well-structured. The key challenges they face include:
+
+Content Organization: Presenting information in a structured and hierarchical manner that aligns with educational standards.
+Scalability: Handling data for a large number of countries without manual intervention.
+Accessibility: Ensuring that the information is easily accessible from various applications and platforms used by educators and students.
+Interoperability: Allowing cross-origin requests to integrate the API seamlessly with different front-end applications.
+To address these challenges, GlobalEdu Platforms has decided to develop a web application that exposes a RESTful API. This API will allow their educational tools to fetch and display structured outlines of Wikipedia pages for any given country. The application needs to:
+
+Accept a country name as a query parameter.
+Fetch the corresponding Wikipedia page for that country.
+Extract all headings (H1 to H6) from the page.
+Generate a Markdown-formatted outline that reflects the hierarchical structure of the content.
+Enable Cross-Origin Resource Sharing (CORS) to allow GET requests from any origin, facilitating seamless integration with various educational platforms.
+Your Task
+Write a web application that exposes an API with a single query parameter: ?country=. It should fetch the Wikipedia page of the country, extracts all headings (H1 to H6), and create a Markdown outline for the country. The outline should look like this:
+
+
+## Contents
+
+# Vanuatu
+
+## Etymology
+
+## History
+
+### Prehistory
+
+...
+API Development: Choose any web framework (e.g., FastAPI) to develop the web application. Create an API endpoint (e.g., /api/outline) that accepts a country query parameter.
+Fetching Wikipedia Content: Find out the Wikipedia URL of the country and fetch the page's HTML.
+Extracting Headings: Use an HTML parsing library (e.g., BeautifulSoup, lxml) to parse the fetched Wikipedia page. Extract all headings (H1 to H6) from the page, maintaining order.
+Generating Markdown Outline: Convert the extracted headings into a Markdown-formatted outline. Headings should begin with #.
+Enabling CORS: Configure the web application to include appropriate CORS headers, allowing GET requests from any origin.
+What is the URL of your API endpoint?
+We'll check by sending a request to this URL with ?country=... passing different countries.
+""",
     """Weather Data Integration for AgroTech Insights
     AgroTech Insights is a leading agricultural technology company that provides data-driven solutions to farmers and agribusinesses. By leveraging advanced analytics and real-time data, AgroTech helps optimize crop yields, manage resources efficiently, and mitigate risks associated with adverse weather conditions. Accurate and timely weather forecasts are crucial for making informed decisions in agricultural planning and management.
 
@@ -831,6 +871,18 @@ As long as the LLM says the word Yes (case sensitive), you will be marked correc
     Download the data from
 
     What is the total sales value?""",
+    """Your task as a data analyst at EngageMetrics is to write a query that performs the following:
+
+    Filter Posts by Date: Consider only posts with a timestamp greater than or equal to a specified minimum time (2025-01-28T21:36:31.398Z), ensuring that the analysis focuses on recent posts.
+    Evaluate Comment Quality: From these recent posts, identify posts where at least one comment has received more than a given number of useful stars (5). This criterion filters out posts with low or mediocre engagement.
+    Extract and Sort Post IDs: Finally, extract all the post_id values of the posts that meet these criteria and sort them in ascending order.
+    By accurately extracting these high-impact post IDs, EngageMetrics can:
+
+    Enhance Reporting: Provide clients with focused insights on posts that are currently engaging audiences effectively.
+    Target Content Strategy: Help marketing teams identify trending content themes that generate high-quality user engagement.
+    Optimize Resource Allocation: Enable better prioritization for content promotion and further in-depth analysis of high-performing posts.
+    Write a DuckDB SQL query to find all posts IDs after 2025-01-28T21:36:31.398Z with at least 1 comment with 5 useful stars, sorted. The result should be a table with a single column called post_id, and the relevant post IDs should be sorted in ascending order.
+    Check the console for the result of your query.""",
     """Log Analysis for DataSure Technologies
     DataSure Technologies is a leading provider of IT infrastructure and software solutions, known for its robust systems and proactive maintenance practices. As part of their service offerings, DataSure collects extensive logs from thousands of servers and applications worldwide. These logs, stored in JSON format, are rich with information about system performance, error events, and user interactions. However, the logs are complex and deeply nested, which can make it challenging to quickly identify recurring issues or anomalous behavior.
 
@@ -856,18 +908,6 @@ As long as the LLM says the word Yes (case sensitive), you will be marked correc
     Download the data from
 
     How many times does K appear as a key?""",
-    """Your task as a data analyst at EngageMetrics is to write a query that performs the following:
-
-    Filter Posts by Date: Consider only posts with a timestamp greater than or equal to a specified minimum time (2025-01-28T21:36:31.398Z), ensuring that the analysis focuses on recent posts.
-    Evaluate Comment Quality: From these recent posts, identify posts where at least one comment has received more than a given number of useful stars (5). This criterion filters out posts with low or mediocre engagement.
-    Extract and Sort Post IDs: Finally, extract all the post_id values of the posts that meet these criteria and sort them in ascending order.
-    By accurately extracting these high-impact post IDs, EngageMetrics can:
-
-    Enhance Reporting: Provide clients with focused insights on posts that are currently engaging audiences effectively.
-    Target Content Strategy: Help marketing teams identify trending content themes that generate high-quality user engagement.
-    Optimize Resource Allocation: Enable better prioritization for content promotion and further in-depth analysis of high-performing posts.
-    Write a DuckDB SQL query to find all posts IDs after 2025-01-28T21:36:31.398Z with at least 1 comment with 5 useful stars, sorted. The result should be a table with a single column called post_id, and the relevant post IDs should be sorted in ascending order.
-    Check the console for the result of your query.""",
     """Enhancing Accessibility and Content Analysis for Mystery Audiobooks
     Mystery Tales Publishing is an independent publisher specializing in mystery and suspense audiobooks. To broaden their audience and improve accessibility, they have been uploading narrated versions of their stories to YouTube. In addition to reaching visually impaired users, they want to leverage transcripts for content summarization, search indexing, and social media promotion.
 
@@ -993,10 +1033,10 @@ for i in range(len(titles)):
         else {"description": "", "files": []}
     )
 
-# with open("/home/gir/Desktop/tdsproj2/data/questions.json", "w") as f:
-#     json.dump(data, f)
+with open("/home/gir/Desktop/tdsproj2/data/questions.json", "w") as f:
+    json.dump(data, f)
 
-# create objects like this 
+# create objects like this
 # "make_http_requests_with_uv": {
 #         "name": "make_http_requests_with_uv",
 #         "description": "extract the http url and query parameters from the given text",
@@ -1041,4 +1081,4 @@ for i in range(len(titles)):
     """
 
 objects += """}"""
-print(objects)
+# print(objects)

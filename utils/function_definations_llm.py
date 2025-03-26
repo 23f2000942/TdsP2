@@ -382,35 +382,33 @@ function_definitions_objects_llm = {
     },
 
     "push_an_image_to_docker_hub": {
-        "type": "function",
-        "function": {
-            "name": "push_an_image_to_docker_hub",
-            "description": "Extracts parameters for Docker image creation and pushing to Docker Hub",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "tag": {
-                        "type": "string",
-                        "description": "The tag to be added to the Docker image(eg.'22ds3000103')"
-                    }
-                },
-                "required": ["tag"]
-            }
+        "name": "push_an_image_to_docker_hub",
+        "description": "Creates and pushes a Docker image to Docker Hub with the specified tag. Uses environment variables for authentication.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "tag": {
+                    "type": "string",
+                    "description": "The tag to be added to the Docker image (e.g., '22ds3000103')"
+                }
+            },
+            "required": ["tag"]
         }
     },
 
     "write_a_fastapi_server_to_serve_data": {
         "name": "write_a_fastapi_server_to_serve_data",
-        "description": "description",
+        "description": "Creates a FastAPI server to serve student data from a CSV file and returns instructions for running the server",
         "parameters": {
             "type": "object",
             "properties": {
-                "text": {
+                "csv_path": {
                     "type": "string",
-                    "description": "The text to extract the data from"
+                    "description": "Path to the CSV file containing student data with columns: studentId, class",
+                    "default": "q-fastapi.csv"
                 }
             },
-            "required": ["text"]
+            "required": ['csv_path']
         }
     },
 
@@ -620,7 +618,7 @@ function_definitions_objects_llm = {
     },
 
     "scrape_imdb_movies": {
-        "name": "fetch_filtered_imdb_titles",
+        "name": "scrape_imdb_movies",
         "description": "Fetches movie titles from IMDb within a specified rating range",
         "parameters": {
             "type": "object",
@@ -640,109 +638,105 @@ function_definitions_objects_llm = {
 
     "wikipedia_outline": {
         "name": "wikipedia_outline",
-        "description": "description",
+        "description": "Creates and runs a FastAPI application that provides a Wikipedia outline API on localhost",
         "parameters": {
             "type": "object",
             "properties": {
-                "text": {
+                "host": {
                     "type": "string",
-                    "description": "The text to extract the data from"
+                    "description": "The host address to run the API on (default: '127.0.0.1')"
+                },
+                "port": {
+                    "type": "integer",
+                    "description": "The port number to run the API on (default: 8000)"
+                },
+                "enable_cors": {
+                    "type": "boolean",
+                    "description": "Whether to enable CORS for all origins (default: True)"
                 }
-            },
-            "required": ["text"]
+            }
         }
     },
 
     "scrape_the_bbc_weather_api": {
-    "type": "function",
-    "function": {
         "name": "scrape_the_bbc_weather_api",
-        "description": "Fetches and scrapes weather forecast data for a specified city from the BBC Weather API and website, returning a JSON object mapping dates to weather descriptions.",
+        "type": "function",
+        "description": "Fetches and scrapes weather forecast data...",
         "parameters": {
             "type": "object",
             "properties": {
                 "city": {
                     "type": "string",
-                    "description": "The name of the city for which to retrieve the weather forecast (e.g., 'Luanda', 'London')."
+                    "description": "The name of the city for which to retrieve the weather forecast..."
                 }
             },
             "required": ["city"]
         }
-    }
-},
+    },
 
     "find_the_bounding_box_of_a_city": {
-    "type": "function",
-    "function": {
-        "name": "find_the_bounding_box_of_a_city",
-        "description": "Fetches the minimum latitude of the bounding box for a specified city in a country using the Nominatim API, optionally filtering by an osm_id ending pattern to disambiguate multiple entries.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "city": {
-                    "type": "string",
-                    "description": "The name of the city to retrieve geospatial data for (e.g., 'Tianjin')."
+            "name": "find_the_bounding_box_of_a_city",
+            "description": "Fetches any specified coordinate of the bounding box for a city in a country using the Nominatim API, optionally filtering by an osm_id ending pattern to disambiguate multiple entries.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "city": {
+                        "type": "string",
+                        "description": "The name of the city to retrieve geospatial data for (e.g., 'Luanda', 'Tianjin')."
+                    },
+                    "country": {
+                        "type": "string",
+                        "description": "The name of the country where the city is located (e.g., 'Angola', 'China')."
+                    },
+                    "osm_id_ending": {
+                        "type": "string",
+                        "description": "The ending pattern of the osm_id to filter the correct city instance (e.g., '2077'). Optional; if omitted, returns the first match."
+                    }
                 },
-                "country": {
-                    "type": "string",
-                    "description": "The name of the country where the city is located (e.g., 'China')."
-                },
-                "osm_id_ending": {
-                    "type": "string",
-                    "description": "The ending pattern of the osm_id to filter the correct city instance (e.g., '2077'). Optional; if omitted, returns the first match."
-                }
-            },
-            "required": ["city", "country"]
-        }
-    }
-},
+                "required": ["city", "country", "osm_id_ending"]
+            }
+    },
 
     "search_hacker_news": {
-    "type": "function",
-    "function": {
-        "name": "search_hacker_news",
-        "description": "Searches Hacker News via the HNRSS API for the latest post mentioning a specified technology topic with a minimum number of points, returning the post's link as a JSON object.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "query": {
-                    "type": "string",
-                    "description": "The technology topic to search for in Hacker News posts (e.g., 'python', 'blockchain')."
-                },
-                "points": {
-                    "type": "integer",
-                    "description": "The minimum number of points the post must have to be considered relevant."
-                }
+    "name": "search_hacker_news",
+    "description": "Searches Hacker News via the HNRSS API for the latest post mentioning a specified technology topic with a minimum number of points, returning the post's link as a JSON object.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "query": {
+                "type": "string",
+                "description": "The technology topic to search for in Hacker News posts (e.g., 'python', 'blockchain')."
             },
-            "required": ["query", "points"]
-        }
+            "points": {
+                "type": "integer",
+                "description": "The minimum number of points the post must have to be considered relevant."
+            }
+        },
+        "required": ["query", "points"]
     }
 },
 
     "find_newest_github_user": {
-    "type": "function",
-    "function": {
-        "name": "find_newest_github_user",
-        "description": "Searches GitHub for the newest user in a specified location with a follower count based on a comparison operator, excluding users who joined after March 23, 2025, 3:57:03 PM PDT. Returns the creation date in ISO 8601 format.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "location": {
-                    "type": "string",
-                    "description": "The city to search for GitHub users (e.g., 'Delhi')."
-                },
-                "followers": {
-                    "type": "integer",
-                    "description": "The number of followers to filter by."
-                },
-                "operator": {
-                    "type": "string",
-                    "enum": ["gt", "lt", "eq"],
-                    "description": "The comparison operator for followers: 'gt' for greater than, 'lt' for less than, 'eq' for equal to."
-                }
+    "name": "find_newest_github_user",
+    "description": "Searches GitHub for the newest user in a specified location with a follower count based on a comparison operator, excluding users who joined after March 23, 2025, 3:57:03 PM PDT. Returns the creation date in ISO 8601 format.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "location": {
+                "type": "string",
+                "description": "The city to search for GitHub users (e.g., 'Delhi')."
             },
-            "required": ["location", "followers", "operator"]
-        }
+            "followers": {
+                "type": "integer",
+                "description": "The number of followers to filter by."
+            },
+            "operator": {
+                "type": "string",
+                "enum": ["gt", "lt", "eq"],
+                "description": "The comparison operator for followers: 'gt' for greater than, 'lt' for less than, 'eq' for equal to."
+            }
+        },
+        "required": ["location", "followers", "operator"]
     }
 },
 
@@ -886,18 +880,30 @@ function_definitions_objects_llm = {
         }
     },
 
-    "parse_partial_json": {
+        "parse_partial_json": {
         "name": "parse_partial_json",
-        "description": "description",
+        "description": "Aggregates the numeric values of a specified key from a JSONL file and returns the total sum. This function is intended for processing digitized OCR data from sales receipts, where some entries may be truncated. It extracts the numeric value from each row based on the provided key and a regular expression pattern, validates the data, and computes the aggregate sum.",
         "parameters": {
-            "type": "object",
-            "properties": {
-                "text": {
-                    "type": "string",
-                    "description": "The text to extract the data from"
-                }
+        "type": "object",
+        "properties": {
+            "file_path": {
+            "type": "string",
+            "description": "The path to the JSONL file containing the digitized sales data."
             },
-            "required": ["text"]
+            "key": {
+            "type": "string",
+            "description": "The JSON key whose numeric values will be summed (e.g., 'sales').",
+            },
+            "num_rows": {
+            "type": "integer",
+            "description": "The total number of rows in the JSONL file for data validation purposes.",
+            },
+            "regex_pattern": {
+            "type": "string",
+            "description": "A custom regular expression pattern to extract the numeric value from each JSON line."
+            }
+        },
+        "required": ["file_path","key", "num_rows", "regex_pattern"]
         }
     },
 
@@ -918,16 +924,25 @@ function_definitions_objects_llm = {
 
     "duckdb_social_media_interactions": {
         "name": "duckdb_social_media_interactions",
-        "description": "description",
+        "description": "Write a DuckDB query to filter posts by date, evaluate comment quality, extract and sort the Post IDs according to the timestamp, number of comments, and number of useful stars on the posts.",
         "parameters": {
             "type": "object",
             "properties": {
-                "text": {
+                "Time": {
                     "type": "string",
-                    "description": "The text to extract the data from"
+                    "format": "date-time",
+                    "description": "The timestamp after which the posts are to be filtered (ISO 8601 format)"
+                },
+                "Comments": {
+                    "type": "integer",
+                    "description": "The minimum number of comments on the posts to be filtered"
+                },
+                "Stars": {
+                    "type": "integer",
+                    "description": "The minimum number of useful stars on the posts to be filtered"
                 }
             },
-            "required": ["text"]
+            "required": ["Time", "Comments", "Stars"]
         }
     },
 
