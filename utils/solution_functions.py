@@ -17,6 +17,10 @@ import atoma
 import json
 import httpx
 from dotenv import load_dotenv
+from fuzzywuzzy import process
+from datetime import datetime,timedelta
+
+from collections import defaultdict
 
 load_dotenv()
 
@@ -1577,9 +1581,10 @@ def convert_a_pdf_to_markdown():
     return ""
 
 
-def clean_up_excel_sales_data():
-    return ""
-
+def clean_up_excel_sales_data(file_path: str)->int:
+    with open(file_path, 'r', encoding='utf-8') as f: 
+        data=json.load(file_path)
+    return data
 
 def parse_log_line(line):
     # Regex for parsing log lines
@@ -1661,28 +1666,213 @@ def clean_up_student_marks(file_path, section_prefix, weekday, start_hour, end_h
     return filtered_df.shape[0]
 
 
-def apache_log_requests():
-    return ""
+def apache_log_requests(file_path, topic_heading, start_time, end_time, day):
+    # Convert start and end times to integers
+    start_hour = int(start_time)
+    end_hour = int(end_time)
+    
+    # Define a mapping for weekday names to numbers (Sunday = 6)
+    weekday_map = {
+        "Monday": 0, "Tuesday": 1, "Wednesday": 2, "Thursday": 3, 
+        "Friday": 4, "Saturday": 5, "Sunday": 6
+    }
+    
+    # Get all matching dates in May 2024 for the given weekday
+    target_weekday = weekday_map.get(day, -1)
+    if target_weekday == -1:
+        raise ValueError("Invalid weekday provided.")
+    
+    # Generate all dates in May 2024 that fall on the given weekday
+    may_dates = []
+    for i in range(1, 32):  # May has 31 days
+        try:
+            date = datetime(2024, 5, i)
+            if date.weekday() == target_weekday:
+                may_dates.appe nd(date.strftime("%d/%b/%Y"))  # Format as '23/May/2024'
+        except ValueError:
+            continue  # Skip invalid dates
+    
+    # Regex pattern to extract necessary log fields
+    log_pattern = re.compile(
+        r'(?P<ip>\S+) \S+ \S+ \[(?P<timestamp>[^]]+)\] "(?P<method>\S+) (?P<url>\S+) \S+" (?P<status>\d+) \S+'
+    )
+    
+    # Counter for successful GET requests in the time range
+    successful_requests = 0
+    
+    # Open and read the gzip log file
+    with gzip.open(file_path, 'rt', encoding='utf-8', errors='ignore') as log_file:
+        for line in log_file:
+            match = log_pattern.search(line)
+            if match:
+                timestamp = match.group("timestamp")  # E.g. "23/May/2024:13:45:22 +0000"
+                method = match.group("method")
+                url = match.group("url")
+                status = int(match.group("status"))
+                
+                # Extract date and hour from timestamp
+                log_date, log_time = timestamp.split(":")[0], int(timestamp.split(":")[1])
+                
+                # Check conditions: valid date, time range, GET request, successful status
+                if log_date in may_dates and start_hour <= log_time < end_hour:
+                    if method == "GET" and 200 <= status < 300 and url.startswith("/telugu/"):
+                        successful_requests += 1
+    
+    return f"Total successful GET requests for /telugu/ from {start_time}:00 to {end_time}:00 on {day}s in May 2024: {successful_requests}"
 
 
-def apache_log_downloads():
-    return ""
+
+def apache_log_downloads(file_path, station_name, date):
+    """
+    Analyzes an Apache log file to find the IP address with the highest download volume
+    for a specific content directory and date.
+
+    Parameters:
+        file_path (str): Path to the gzipped Apache log file.
+        station_name (str): The directory to filter requests (e.g., 'tamilmp3').
+        date (str): The date to filter requests (format: 'DD/Mon/YYYY', e.g., '23/May/2024').
+
+    Returns:
+        dict: A dictionary containing the top IP and the number of bytes downloaded.
+    """
+    log_pattern = re.compile(
+        r'(?P<ip>\S+) \S+ \S+ \[(?P<time>\d{2}/[A-Za-z]+/\d{4}):\d{2}:\d{2}:\d{2} [+-]\d{4}\] "(?P<method>\S+) (?P<url>\S+) (?P<protocol>[^"]+)" (?P<status>\d+) (?P<size>\S+)'
+    )
+    
+    ip_downloads = defaultdict(int)
+    
+    try:
+        with gzip.open(file_path, 'rt', encoding='utf-8', errors='ignore') as log_file:
+            for line in log_file:
+                match = log_pattern.search(line)
+                if match:
+                    ip = match.group("ip")
+                    time = match.group("time")
+                    url = match.group("url")
+                    status = int(match.group("status"))
+                    size = match.group("size")
+
+                    # Convert '-' size to 0
+                    size = int(size) if size.isdigit() else 0
+
+                    # Filter requests by station and exact date
+                    if url.startswith(f"/{station_name}/") and time.startswith(date):
+                        ip_downloads[ip] += size
+        
+        if not ip_downloads:
+            return {"error": "No matching entries found for the given station and date."}
+        
+        # Identify the top IP by download volume
+        top_ip = max(ip_downloads, key=ip_downloads.get)
+        return {"top_ip": top_ip, "bytes_downloaded": ip_downloads[top_ip]}
+    
+    except Exception as e:
+        return {"error": str(e)}
 
 
-def clean_up_sales_data():
-    return ""
+
+def parse_partial_json(file_path: str)->int:
+    
+    total_sales = 0
+    sales_pattern = re.compile(r'"sales"\s*:\s*([\d.]+)')  # Matches "sales": <number>
+
+    with open(file_path, "r", encoding="utf-8") as file:
+        for line in file:
+            match = sales_pattern.search(line)  # Search for "sales" field
+            if match:
+                total_sales += float(match.group(1))  # Extract and sum sales value
+
+    return total_sales
 
 
-def parse_partial_json():
-    return ""
+import pandas as pd
+from fuzzywuzzy import process
+import json
+
+def clean_up_sales_data(file_path, product, city, min_units):
+    with open(file_path, 'r', encoding='utf-8') as file:
+        data = json.load(file)
+
+    df = pd.DataFrame(data)
+
+    # Print initial DataFrame for debugging
+    print("Original DataFrame:\n", df.head())
+
+    correct_cities = [
+        "Buenos Aires", "Shanghai", "Mexico City", "Sao Paulo", "Istanbul", "Chongqing",
+        "Lahore", "Mumbai", "Guangzhou", "Bangalore", "Shenzhen", "Kolkata", "Delhi",
+        "Manila", "London", "Lagos", "Beijing", "Karachi", "Jakarta", "Cairo", "Tokyo",
+        "Bogota", "Dhaka", "Kinshasa", "Paris", "Tianjin", "Rio de Janeiro", "Moscow",
+        "Chennai", "Osaka"
+    ]
+
+    # Apply fuzzy matching to correct city names
+    df['city'] = df['city'].apply(lambda x: process.extractOne(x, correct_cities, score_cutoff=60)[0] if isinstance(x, str) else x)
+
+    print("Corrected DataFrame:\n", df[['city', 'product', 'sales']].head())
+
+    # Correct the input city
+    corrected_city = process.extractOne(city, correct_cities, score_cutoff=60)
+    if corrected_city:
+        city = corrected_city[0]
+
+    # Ensure no leading/trailing spaces
+    df['city'] = df['city'].str.strip()
+    df['product'] = df['product'].str.strip()
+    city = city.strip()
+    product = product.strip()
+
+    # Convert sales to numeric (if needed)
+    df['sales'] = pd.to_numeric(df['sales'], errors='coerce')
+
+    # Debugging: Print unique values
+    print("Unique Cities:", df['city'].unique())
+    print("Unique Products:", df['product'].unique())
+    print("Min & Max Sales:", df['sales'].min(), df['sales'].max())
+
+    #converting everything to lowercase
+
+    df['product'] = df['product'].str.lower()
+    product = product.lower()
+    df['city'] = df['city'].str.lower()
+    city = city.lower()
+    
+
+    print("Filtering for: Product =", product, ", City =", city, ", Min Sales =", min_units)
+
+    # Test individual conditions
+    print("Filter by product:\n", df[df['product'] == product])
+    print("Filter by city:\n", df[df['city'] == city])
+    print("Filter by sales:\n", df[df['sales'] >= min_units])
+
+    # Final filtering
+    filtered_df = df[(df['product'] == product) & (df['sales'] >= min_units) & (df['city'] == city)]
+    
+    print("Filtered DataFrame:\n", filtered_df)
+
+    print("Total Sales Sum:", filtered_df['sales'].sum())
+
+    return int(filtered_df['sales'].sum()) if not filtered_df.empty else "No matching results"
 
 
 def extract_nested_json_keys():
     return ""
 
 
-def duckdb_social_media_interactions():
-    return ""
+def duckdb_social_media_interactions(start_time, number_of_stars, number_of_comments):
+    return f"""
+    SELECT post_id
+    FROM social_media
+    WHERE timestamp >= '{start_time}'
+    AND EXISTS (
+        SELECT 1
+        FROM UNNEST(comments) AS c
+        WHERE c.stars->>'useful'::INTEGER >= {number_of_stars}
+        AND (SELECT COUNT(*) FROM UNNEST(comments) AS c2 WHERE c2.stars->>'useful'::INTEGER >= {number_of_stars}) >= {number_of_comments}
+    )
+    ORDER BY post_id;
+    """
+
 
 
 def transcribe_a_youtube_video():

@@ -855,49 +855,104 @@ function_definitions_objects_llm = {
             }
         }
     },
-
-    "apache_log_downloads": {
-        "name": "apache_log_downloads",
-        "description": "description",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "text": {
-                    "type": "string",
-                    "description": "The text to extract the data from"
-                }
+"apache_log_requests": {
+    "name": "apache_log_requests",
+    "description": "Extracts and analyzes Apache log requests for specific conditions, such as peak usage periods, request types, and success criteria.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "file_path": {
+                "type": "string",
+                "description": "The file path of the GZipped Apache log file."
             },
-            "required": ["text"]
-        }
-    },
+            "topic_heading": {
+                "type": "string",
+                "description": "A short heading summarizing the analysis topic."
+            },
+            "start_time": {
+                "type": "string",
+                "description": "The start time of the time window for analysis, in HH format (24-hour)."
+            },
+            "end_time": {
+                "type": "string",
+                "description": "The end time (exclusive) of the time window for analysis, in HH format (24-hour)."
+            },
+            "day": {
+                "type": "string",
+                "description": "The specific day for analysis (e.g., 'Sunday')."
+            }
+        },
+        "required": ["file_path", "topic_heading", "start_time", "end_time", "day"]
+    }
+}
+,
+
+"apache_log_downloads": {
+    "name": "apache_log_downloads",
+    "description": "Analyzes an Apache log file to track bandwidth usage for a specific station and date. The function filters log entries based on a given date and extracts only those requests related to a specific station. It then aggregates data by IP address, calculating the total bytes downloaded per IP. Finally, it identifies the top data-consuming IP and reports the total bytes downloaded by that IP.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "file_path": {
+                "type": "string",
+                "description": "The full file path of the Apache log file (GZipped format)."
+            },
+            "station_name": {
+                "type": "string",
+                "description": "The name of the station or content category being analyzed (e.g., 'tamilmp3')."
+            },
+            "date": {
+                "type": "string",
+                "format": "date",
+                "description": "The specific date (YYYY-MM-DD) for which log entries should be filtered."
+            }
+        },
+        "required": ["file_path", "station_name", "date"]
+    }
+}
+,
 
     "clean_up_sales_data": {
         "name": "clean_up_sales_data",
-        "description": "description",
+        "description": "Clean up the sales data given in the json file. To do this, find the product, city and minimum units (min_units) asked for in the question",
         "parameters": {
             "type": "object",
             "properties": {
-                "text": {
+                  "file_path": {
                     "type": "string",
-                    "description": "The text to extract the data from"
+                    "description": "The JSON file containing product data."
+                },
+                "product": {
+                    "type": "string",
+                    "description": "The product for which we want to find the number of units sold in a given city and minimum order quantity per transaction"
+                },
+                "city": {
+                    "type": "string",
+                    "description": "The city for which we want to find the number of units sold in a given product and minimum order quantity per transaction"
+                },
+                "min_units": {
+                    "type": "number",
+                    "description": "The minimum units of the product per transaction for which we want to find the number of units sold in a given city."
                 }
+              
             },
-            "required": ["text"]
+            "required": [ "file_path","product", "city", "min_units"]
         }
     },
+    
 
     "parse_partial_json": {
         "name": "parse_partial_json",
-        "description": "description",
+        "description": "Sum up the values of the sales field in the jsonl file",
         "parameters": {
             "type": "object",
             "properties": {
                 "text": {
                     "type": "string",
-                    "description": "The text to extract the data from"
+                    "description":"Path to the jsonl file from which we will sum the values contained in sales field"
                 }
             },
-            "required": ["text"]
+            "required": ["file_path"]
         }
     },
 
@@ -916,20 +971,29 @@ function_definitions_objects_llm = {
         }
     },
 
-    "duckdb_social_media_interactions": {
-        "name": "duckdb_social_media_interactions",
-        "description": "description",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "text": {
-                    "type": "string",
-                    "description": "The text to extract the data from"
-                }
+"duckdb_social_media_interactions": {
+    "name": "duckdb_social_media_interactions",
+    "description": "description",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "start_time": {
+                "type": "string",
+                "description": "The time after which to find all post IDs in the DuckDB query"
             },
-            "required": ["text"]
-        }
-    },
+            "number_of_stars": {
+                "type": "integer",
+                "description": "The minimum number of useful stars needed in the DuckDB query"
+            },
+            "number_of_comments": {
+                "type": "integer",
+                "description": "The minimum number of useful comments needed in the DuckDB query"
+            }
+        },
+        "required": ["start_time", "number_of_stars", "number_of_comments"]
+    }
+}
+,
 
     "transcribe_a_youtube_video": {
         "name": "transcribe_a_youtube_video",

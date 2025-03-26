@@ -80,15 +80,27 @@ def process_file():
     print("-----------arguments------------\n", arguments)
 
     # For compress_an_image, override the image_path with the actual path
-    if matched_function == "compress_an_image" and file_names and tmp_dir_local:
-        # Use the first uploaded image file
-        actual_image_path = os.path.join(tmp_dir_local, file_names[0])
-        arguments["image_path"] = actual_image_path
-        print(f"Overriding image path to: {actual_image_path}")
+    if matched_function in {
+    "compress_an_image", "parse_partial_json", "clean_up_sales_data",
+    "apache_log_downloads", "apache_log_requests"
+} and file_names:
+        actual_file_path = os.path.join(tmp_dir_local, file_names[0])
+        arguments["file_path" if matched_function != "compress_an_image" else "image_path"] = actual_file_path
+        print(f"Overriding {'image' if matched_function == 'compress_an_image' else 'file'} path to: {actual_file_path}")
+
+        if matched_function == "parse_partial_json":
+            arguments = {}  # Reset arguments for this case
+
+        print("Arguments dictionary:", arguments)
+
+
+    
 
     # Call the solution function with the extracted arguments
     try:
+        
         answer = solution_function(**arguments)
+        
     except Exception as e:
         return jsonify({"error": f"Error executing function: {str(e)}"}), 500
 

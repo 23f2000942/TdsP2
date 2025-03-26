@@ -23,6 +23,13 @@ def find_similar_question(input_question):
     most_similar_question = question_keys[most_similar_question_index]
     most_similar_question_description = question_descriptions[most_similar_question_index]
 
+    # **Manual Rule to Differentiate "apache_log_requests" and "apache_log_downloads"**
+    if most_similar_question in ["apache_log_requests", "apache_log_downloads"]:
+        if "top data consumer" in input_question or "bytes downloaded" in input_question or "bandwidth" in input_question:
+            most_similar_question = "apache_log_downloads"
+        if "successful GET requests" in input_question or "peak hours" in input_question:
+            most_similar_question = "apache_log_requests"
+        
     return (most_similar_question, most_similar_question_description, question_files[most_similar_question_index])
 
 
